@@ -14,6 +14,18 @@ async function parseFilePromise(config) {
 		tagNameProcessors: [xml2js.processors.stripPrefix]
 	});
 
+	authors = data.rss.channel[0].author
+
+	config.authors = Object.assign({}, ...authors.map((x) => ({[x.author_login]: x})));
+	// {
+	// 	author_id: [ '###' ],
+	// 	author_login: [ '' ],
+	// 	author_email: [ '' ],
+	// 	author_display_name: [ '' ],
+	// 	author_first_name: [ '' ],
+	// 	author_last_name: [ '' ]
+	//   }
+
 	const postTypes = getPostTypes(data, config);
 	const posts = collectPosts(data, postTypes, config);
 
@@ -56,23 +68,37 @@ function collectPosts(data, postTypes, config) {
 	postTypes.forEach(postType => {
 		const postsForType = getItemsOfType(data, postType)
 			.filter(post => post.status[0] !== 'trash' && post.status[0] !== 'draft')
-			.map(post => ({
+			.map(post => { 
+
+				author_username = getAuthor(post);
+				author = config.authors[author_username];
+
+				if (author === undefined) {
+					author = {}
+					author.author_display_name = author_username
+					author.author_email = author_username
+				}
+
+				return ({
 				// meta data isn't written to file, but is used to help with other things
 				meta: {
 					id: getPostId(post),
 					slug: getPostSlug(post),
 					coverImageId: getPostCoverImageId(post),
 					type: postType,
-					imageUrls: []
+					imageUrls: [],
+					author_username: author_username
 				},
 				frontmatter: {
 					title: getPostTitle(post),
 					date: getPostDate(post),
 					categories: getCategories(post),
-					tags: getTags(post)
+					tags: getTags(post),
+					author_name: author.author_display_name,
+					author_email: author.author_email
 				},
 				content: translator.getPostContent(post, turndownService, config)
-			}));
+			})});
 
 		if (postTypes.length > 1) {
 			console.log(`${postsForType.length} "${postType}" posts found.`);
@@ -89,6 +115,10 @@ function collectPosts(data, postTypes, config) {
 
 function getPostId(post) {
 	return post.post_id[0];
+}
+
+function getAuthor(post) {
+	return post.creator[0];
 }
 
 function getPostSlug(post) {

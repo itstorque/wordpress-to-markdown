@@ -144,7 +144,8 @@ async function loadImageFilePromise(imageUrl) {
 			encoding: null, // preserves binary encoding
 			headers: {
 				'User-Agent': 'wordpress-export-to-markdown'
-			}
+			},
+			strictSSL: false
 		});
 	} catch (ex) {
 		if (ex.name === 'StatusCodeError') {
